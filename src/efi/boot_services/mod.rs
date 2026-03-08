@@ -1,20 +1,8 @@
-use super::guid::EfiGuid;
-use super::table_header::EfiTableHeader;
-use super::{EfiHandle, EfiStatus};
+pub mod constants;
 
-pub const EFI_LOADER_CODE: u32 = 1;
-pub const EFI_LOADER_DATA: u32 = 2;
-
-pub const EFI_ALLOCATE_ANY_PAGES: u32 = 0;
-pub const EFI_ALLOCATE_MAX_ADDRESS: u32 = 1;
-pub const EFI_ALLOCATE_ADDRESS: u32 = 2;
-
-pub const EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL: u32 = 0x01;
-pub const EFI_OPEN_PROTOCOL_GET_PROTOCOL: u32 = 0x02;
-pub const EFI_OPEN_PROTOCOL_TEST_PROTOCOL: u32 = 0x04;
-pub const EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER: u32 = 0x08;
-pub const EFI_OPEN_PROTOCOL_BY_DRIVER: u32 = 0x10;
-pub const EFI_OPEN_PROTOCOL_EXCLUSIVE: u32 = 0x20;
+use crate::efi::guid::EfiGuid;
+use crate::efi::table_header::EfiTableHeader;
+use crate::efi::{EfiHandle, EfiStatus};
 
 #[repr(C)]
 pub struct EfiBootServices {
@@ -79,4 +67,26 @@ pub struct EfiBootServices {
     pub copy_mem: usize,
     pub set_mem: usize,
     pub create_event_ex: usize,
+}
+
+use core::ptr;
+use constants::EFI_LOADER_DATA;
+use crate::helpers::check;
+
+pub unsafe fn get_memory_map_and_exit(
+    boot_services: *mut EfiBootServices,
+    image_handle: EfiHandle,
+) -> (*mut u8, usize, usize, u32) {
+    unsafe {
+        let mmap_buffer_size: usize = 0x8000;
+        let mut mmap_buffer: *mut u8 = ptr::null_mut();
+        check(((*boot_services).allocate_pool)(EFI_LOADER_DATA, mmap_buffer_size, &mut mmap_buffer));
+        let mut mmap_size: usize = mmap_buffer_size;
+        let mut map_key: usize = 0;
+        let mut desc_size: usize = 0;
+        let mut desc_ver: u32 = 0;
+        check(((*boot_services).get_memory_map)(&mut mmap_size, mmap_buffer, &mut map_key, &mut desc_size, &mut desc_ver));
+        check(((*boot_services).exit_boot_services)(image_handle, map_key));
+        (mmap_buffer, mmap_size, desc_size, desc_ver)
+    }
 }

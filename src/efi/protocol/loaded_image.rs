@@ -1,6 +1,6 @@
-use super::guid::EfiGuid;
-use super::system_table::EfiSystemTable;
-use super::EfiHandle;
+use crate::efi::guid::EfiGuid;
+use crate::efi::system_table::EfiSystemTable;
+use crate::efi::EfiHandle;
 
 pub static LOADED_IMAGE_PROTOCOL_GUID: EfiGuid = EfiGuid {
     data1: 0x5B1B31A1,

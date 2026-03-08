@@ -1,4 +1,4 @@
-use super::EfiStatus;
+use crate::efi::EfiStatus;
 
 #[repr(C)]
 pub struct EfiSimpleTextOutput {

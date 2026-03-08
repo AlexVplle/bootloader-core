@@ -1,8 +1,5 @@
-pub const PT_LOAD: u32 = 1;
-pub const ELF_MAGIC: u32 = 0x464C457F;
-
 #[repr(C)]
-pub struct Elf64Phdr {
+pub struct Elf64ProgramHeader {
     pub p_type: u32,
     pub p_flags: u32,
     pub p_offset: u64,

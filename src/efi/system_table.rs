@@ -1,5 +1,6 @@
 use super::boot_services::EfiBootServices;
-use super::simple_text_output::EfiSimpleTextOutput;
+use super::configuration_table::EfiConfigurationTable;
+use super::protocol::simple_text_output::EfiSimpleTextOutput;
 use super::table_header::EfiTableHeader;
 use super::EfiHandle;
 
@@ -8,6 +9,7 @@ pub struct EfiSystemTable {
     pub hdr: EfiTableHeader,
     pub firmware_vendor: *mut u16,
     pub firmware_revision: u32,
+    _pad: u32,
     pub console_in_handle: EfiHandle,
     pub con_in: *mut u8,
     pub console_out_handle: EfiHandle,
@@ -16,4 +18,6 @@ pub struct EfiSystemTable {
     pub std_err: *mut u8,
     pub runtime_services: *mut u8,
     pub boot_services: *mut EfiBootServices,
+    pub number_of_table_entries: usize,
+    pub configuration_table: *mut EfiConfigurationTable,
 }

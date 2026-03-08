@@ -1,6 +1,6 @@
+use crate::efi::guid::EfiGuid;
+use crate::efi::EfiStatus;
 use super::file_protocol::EfiFileProtocol;
-use super::guid::EfiGuid;
-use super::EfiStatus;
 
 pub static SIMPLE_FILE_SYSTEM_PROTOCOL_GUID: EfiGuid = EfiGuid {
     data1: 0x964E5B22,

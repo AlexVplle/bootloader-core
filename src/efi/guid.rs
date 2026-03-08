@@ -1,3 +1,4 @@
+#[derive(PartialEq)]
 #[repr(C)]
 pub struct EfiGuid {
     pub data1: u32,

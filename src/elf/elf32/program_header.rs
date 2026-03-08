@@ -1,5 +1,5 @@
 #[repr(C)]
-pub struct Elf32Phdr {
+pub struct Elf32ProgramHeader {
     pub p_type: u32,
     pub p_offset: u32,
     pub p_vaddr: u32,

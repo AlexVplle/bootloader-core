@@ -1,14 +1,7 @@
-use super::guid::EfiGuid;
-use super::EfiStatus;
+pub mod constants;
 
-pub const EFI_FILE_MODE_READ: u64 = 0x1;
-pub const EFI_FILE_MODE_WRITE: u64 = 0x2;
-pub const EFI_FILE_MODE_CREATE: u64 = 0x8000000000000000;
-
-pub const EFI_FILE_READ_ONLY: u64 = 0x1;
-pub const EFI_FILE_HIDDEN: u64 = 0x2;
-pub const EFI_FILE_SYSTEM: u64 = 0x4;
-pub const EFI_FILE_DIRECTORY: u64 = 0x10;
+use crate::efi::guid::EfiGuid;
+use crate::efi::EfiStatus;
 
 #[repr(C)]
 pub struct EfiFileProtocol {

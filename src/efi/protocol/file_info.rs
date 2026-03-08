@@ -1,5 +1,5 @@
-use super::guid::EfiGuid;
-use super::time::EfiTime;
+use crate::efi::guid::EfiGuid;
+use crate::efi::time::EfiTime;
 
 pub static FILE_INFO_GUID: EfiGuid = EfiGuid {
     data1: 0x09576E92,
