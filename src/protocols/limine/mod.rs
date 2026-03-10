@@ -17,7 +17,7 @@ use memory_map::response::LimineMemoryMapResponse;
 
 use crate::allocator::bump::BumpAllocator;
 use crate::framebuffer::FramebufferInfo;
-use crate::arch::x86_64::paging::constants::PAGE_SIZE;
+use crate::arch::Architecture;
 use crate::segment_mapping::SegmentMapping;
 
 fn efi_type_to_limine(efi_type: u32) -> u64 {
@@ -70,7 +70,7 @@ unsafe fn fulfill_framebuffer(
     }
 }
 
-unsafe fn fulfill_memory_map(
+unsafe fn fulfill_memory_map<A: Architecture>(
     request_ptr: *mut u8,
     alloc: &mut BumpAllocator,
     mmap_buffer: *const u8,
@@ -94,7 +94,7 @@ unsafe fn fulfill_memory_map(
             let entry: *mut LimineMemoryMapEntry = entries.add(i);
             ptr::write(entry, LimineMemoryMapEntry {
                 base: physical_start,
-                length: number_of_pages * PAGE_SIZE,
+                length: number_of_pages * A::PAGE_SIZE,
                 entry_type: efi_type_to_limine(efi_type),
             });
             *entry_ptrs.add(i) = entry;
@@ -110,7 +110,7 @@ unsafe fn fulfill_memory_map(
     }
 }
 
-unsafe fn scan_and_fulfill_requests(
+unsafe fn scan_and_fulfill_requests<A: Architecture>(
     mappings: &[SegmentMapping],
     alloc: &mut BumpAllocator,
     fb_info: &FramebufferInfo,
@@ -121,7 +121,7 @@ unsafe fn scan_and_fulfill_requests(
     unsafe {
         for mapping in mappings {
             let start: *mut u8 = mapping.physical_base_address as *mut u8;
-            let size: usize = mapping.pages * PAGE_SIZE as usize;
+            let size: usize = mapping.pages * A::PAGE_SIZE as usize;
             let mut offset: usize = 0;
 
             while offset + REQUEST_RESPONSE_OFFSET + 8 <= size {
@@ -141,7 +141,7 @@ unsafe fn scan_and_fulfill_requests(
                         if id2 == FRAMEBUFFER_ID[0] && id3 == FRAMEBUFFER_ID[1] {
                             fulfill_framebuffer(ptr, alloc, fb_info);
                         } else if id2 == MEMMAP_ID[0] && id3 == MEMMAP_ID[1] {
-                            fulfill_memory_map(ptr, alloc, mmap_buffer, mmap_size, desc_size);
+                            fulfill_memory_map::<A>(ptr, alloc, mmap_buffer, mmap_size, desc_size);
                         }
                     }
                 }
@@ -174,7 +174,7 @@ impl BootProtocol for Limine {
     }
 }
 
-pub unsafe fn boot(
+pub unsafe fn boot<A: Architecture>(
     entry: u64,
     boot_info_buffer: *mut u8,
     fb_info: &FramebufferInfo,
@@ -185,7 +185,7 @@ pub unsafe fn boot(
 ) -> ! {
     unsafe {
         let mut alloc: BumpAllocator = BumpAllocator::new(boot_info_buffer);
-        scan_and_fulfill_requests(
+        scan_and_fulfill_requests::<A>(
             mappings,
             &mut alloc,
             fb_info,

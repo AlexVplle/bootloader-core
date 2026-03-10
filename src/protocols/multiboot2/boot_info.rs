@@ -1,6 +1,6 @@
 use core::ptr;
 
-use crate::arch::x86_64::paging::constants::{PAGE_SIZE};
+use crate::arch::Architecture;
 use super::constants::{
     FRAMEBUFFER_TYPE_RGB, TAG_BOOTLOADER_NAME, TAG_COMMANDLINE, TAG_END, TAG_EFI_MEMORY_MAP,
     TAG_FRAMEBUFFER, TAG_MMAP,
@@ -41,7 +41,7 @@ impl BootInfoBuilder {
         unsafe { self.add_string_tag(TAG_BOOTLOADER_NAME, name) }
     }
 
-    pub unsafe fn add_mmap(
+    pub unsafe fn add_mmap<A: Architecture>(
         &mut self,
         mmap_buffer: *const u8,
         mmap_size: usize,
@@ -67,7 +67,7 @@ impl BootInfoBuilder {
                     _ => 2,
                 };
                 self.alloc.write(base);
-                self.alloc.write(pages * PAGE_SIZE);
+                self.alloc.write(pages * A::PAGE_SIZE);
                 self.alloc.write(mb2_type);
                 self.alloc.write(0u32);
             }
