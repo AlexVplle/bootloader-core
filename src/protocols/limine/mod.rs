@@ -16,7 +16,7 @@ use memory_map::entry::LimineMemoryMapEntry;
 use memory_map::response::LimineMemoryMapResponse;
 
 use crate::allocator::bump::BumpAllocator;
-use crate::efi::protocol::gop::mode::EfiGraphicsOutputProtocolMode;
+use crate::framebuffer::FramebufferInfo;
 use crate::paging::constants::PAGE_SIZE;
 use crate::segment_mapping::SegmentMapping;
 
@@ -33,34 +33,26 @@ fn efi_type_to_limine(efi_type: u32) -> u64 {
 unsafe fn fulfill_framebuffer(
     request_ptr: *mut u8,
     alloc: &mut BumpAllocator,
-    gop_mode: *mut EfiGraphicsOutputProtocolMode,
+    fb_info: &FramebufferInfo,
 ) {
     unsafe {
         let fb: *mut LimineFramebuffer = alloc.alloc::<LimineFramebuffer>();
         let fb_ptr_array: *mut *mut LimineFramebuffer = alloc.alloc::<*mut LimineFramebuffer>();
         let response: *mut LimineFramebufferResponse = alloc.alloc::<LimineFramebufferResponse>();
 
-        let info = (*gop_mode).info;
-        let pitch: u64 = (*info).pixels_per_scan_line as u64 * 4;
-        let (red_shift, green_shift, blue_shift): (u8, u8, u8) = match (*info).pixel_format {
-            0 => (0, 8, 16),
-            1 => (16, 8, 0),
-            _ => (0, 8, 16),
-        };
-
         ptr::write(fb, LimineFramebuffer {
-            address: (*gop_mode).frame_buffer_base,
-            width: (*info).horizontal_resolution as u64,
-            height: (*info).vertical_resolution as u64,
-            pitch,
+            address: fb_info.base,
+            width: fb_info.width as u64,
+            height: fb_info.height as u64,
+            pitch: fb_info.pitch as u64,
             bpp: 32,
             memory_model: 1,
             red_mask_size: 8,
-            red_mask_shift: red_shift,
+            red_mask_shift: fb_info.red_pos,
             green_mask_size: 8,
-            green_mask_shift: green_shift,
+            green_mask_shift: fb_info.green_pos,
             blue_mask_size: 8,
-            blue_mask_shift: blue_shift,
+            blue_mask_shift: fb_info.blue_pos,
             unused: [0; 7],
             edid_size: 0,
             edid: 0,
@@ -121,7 +113,7 @@ unsafe fn fulfill_memory_map(
 unsafe fn scan_and_fulfill_requests(
     mappings: &[SegmentMapping],
     alloc: &mut BumpAllocator,
-    gop_mode: *mut EfiGraphicsOutputProtocolMode,
+    fb_info: &FramebufferInfo,
     mmap_buffer: *const u8,
     mmap_size: usize,
     desc_size: usize,
@@ -147,7 +139,7 @@ unsafe fn scan_and_fulfill_requests(
                         let id2: u64 = *(ptr.add(16) as *const u64);
                         let id3: u64 = *(ptr.add(24) as *const u64);
                         if id2 == FRAMEBUFFER_ID[0] && id3 == FRAMEBUFFER_ID[1] {
-                            fulfill_framebuffer(ptr, alloc, gop_mode);
+                            fulfill_framebuffer(ptr, alloc, fb_info);
                         } else if id2 == MEMMAP_ID[0] && id3 == MEMMAP_ID[1] {
                             fulfill_memory_map(ptr, alloc, mmap_buffer, mmap_size, desc_size);
                         }
@@ -185,7 +177,7 @@ impl BootProtocol for Limine {
 pub unsafe fn boot(
     entry: u64,
     boot_info_buffer: *mut u8,
-    gop_mode: *mut EfiGraphicsOutputProtocolMode,
+    fb_info: &FramebufferInfo,
     mmap_buffer: *const u8,
     mmap_size: usize,
     desc_size: usize,
@@ -196,7 +188,7 @@ pub unsafe fn boot(
         scan_and_fulfill_requests(
             mappings,
             &mut alloc,
-            gop_mode,
+            fb_info,
             mmap_buffer,
             mmap_size,
             desc_size,

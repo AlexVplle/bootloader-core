@@ -1,24 +1,20 @@
 use core::ptr;
 
-use crate::efi::boot_services::EfiBootServices;
-use crate::efi::boot_services::constants::{
-    EFI_ALLOCATE_ADDRESS, EFI_ALLOCATE_ANY_PAGES, EFI_LOADER_CODE,
-};
 use crate::elf::constants::{EI_CLASS, ELF_MAGIC, ELFCLASS32, ELFCLASS64};
 use crate::elf::elf32::header::Elf32Header;
 use crate::elf::elf32::program_header::Elf32ProgramHeader;
 use crate::elf::elf64::constants::PT_LOAD;
 use crate::elf::elf64::header::Elf64Header;
 use crate::elf::elf64::program_header::Elf64ProgramHeader;
-use crate::helpers::{check, halt};
+use crate::firmware::FirmwareInterface;
+use crate::helpers::halt;
 use crate::paging::constants::{PAGE_OFFSET_MASK, PAGE_SIZE};
 use crate::segment_mapping::{SegmentMapping, virtual_to_physical};
 
-const R_X86_64_RELATIVE: u32 = 8;
 const SHT_RELA: u32 = 4;
 
-unsafe fn load_segments(
-    boot_services: *mut EfiBootServices,
+unsafe fn load_segments<F: FirmwareInterface>(
+    firmware: &mut F,
     kernel_buffer: *mut u8,
     ei_class: u8,
     mappings: &mut [SegmentMapping; 16],
@@ -76,21 +72,22 @@ unsafe fn load_segments(
                     + mappings[found_j].pages as u64 * PAGE_SIZE;
                 if segment_end > existing_end {
                     let additional: usize = ((segment_end - existing_end) / PAGE_SIZE) as usize;
-                    let mut new_phys: u64 = mappings[found_j].physical_base_address
+                    let new_phys: u64 = mappings[found_j].physical_base_address
                         + (existing_end - mappings[found_j].virtual_page_base);
-                    check(((*boot_services).allocate_pages)(EFI_ALLOCATE_ADDRESS, EFI_LOADER_CODE, additional, &mut new_phys));
-                    ptr::write_bytes(new_phys as *mut u8, 0, additional * PAGE_SIZE as usize);
+                    let allocated: u64 = firmware.try_allocate_pages_at(new_phys, additional)
+                        .unwrap_or_else(|| halt());
+                    ptr::write_bytes(allocated as *mut u8, 0, additional * PAGE_SIZE as usize);
                     mappings[found_j].pages += additional;
                 }
                 existing_phys
             } else {
-                let mut physical_base_address: u64 = p_paddr & !PAGE_OFFSET_MASK;
-                let alloc_type: u32 = if physical_base_address != 0 { EFI_ALLOCATE_ADDRESS } else { EFI_ALLOCATE_ANY_PAGES };
-                let status: usize = ((*boot_services).allocate_pages)(alloc_type, EFI_LOADER_CODE, pages, &mut physical_base_address);
-                if status != 0 {
-                    physical_base_address = 0;
-                    check(((*boot_services).allocate_pages)(EFI_ALLOCATE_ANY_PAGES, EFI_LOADER_CODE, pages, &mut physical_base_address));
-                }
+                let preferred: u64 = p_paddr & !PAGE_OFFSET_MASK;
+                let physical_base_address: u64 = if preferred != 0 {
+                    firmware.try_allocate_pages_at(preferred, pages)
+                        .unwrap_or_else(|| firmware.allocate_pages(pages))
+                } else {
+                    firmware.allocate_pages(pages)
+                };
                 ptr::write_bytes(physical_base_address as *mut u8, 0, pages * PAGE_SIZE as usize);
                 mappings[*mapping_count] = SegmentMapping { virtual_page_base, physical_base_address, pages };
                 *mapping_count += 1;
@@ -105,6 +102,7 @@ unsafe fn apply_relocations(
     kernel_buffer: *mut u8,
     mappings: &[SegmentMapping],
     mapping_count: usize,
+    r_relative: u32,
 ) {
     unsafe {
         let elf: &Elf64Header = &*(kernel_buffer as *const Elf64Header);
@@ -130,7 +128,7 @@ unsafe fn apply_relocations(
                 let r_offset: u64 = *reloc_entry;
                 let r_info: u64 = *reloc_entry.add(1);
                 let r_addend: i64 = *(reloc_entry.add(2) as *const i64);
-                if r_info as u32 != R_X86_64_RELATIVE {
+                if r_info as u32 != r_relative {
                     continue;
                 }
                 let target_physical: u64 = virtual_to_physical(r_offset, &mappings[..mapping_count]);
@@ -142,11 +140,12 @@ unsafe fn apply_relocations(
     }
 }
 
-pub unsafe fn load_elf(
-    boot_services: *mut EfiBootServices,
+pub unsafe fn load_elf<F: FirmwareInterface>(
+    firmware: &mut F,
     kernel_buffer: *mut u8,
     mappings: &mut [SegmentMapping; 16],
     mapping_count: &mut usize,
+    r_relative: u32,
 ) -> u64 {
     unsafe {
         if *(kernel_buffer as *const u32) != ELF_MAGIC {
@@ -159,13 +158,13 @@ pub unsafe fn load_elf(
             _ => halt(),
         };
 
-        load_segments(boot_services, kernel_buffer, ei_class, mappings, mapping_count);
+        load_segments(firmware, kernel_buffer, ei_class, mappings, mapping_count);
 
         if ei_class == ELFCLASS64 {
-            apply_relocations(kernel_buffer, mappings, *mapping_count);
+            apply_relocations(kernel_buffer, mappings, *mapping_count, r_relative);
         }
 
-        check(((*boot_services).free_pool)(kernel_buffer));
+        firmware.free_buffer(kernel_buffer);
         entry
     }
 }

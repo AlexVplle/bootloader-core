@@ -1,9 +1,8 @@
 [package]
-name = "bootloader_from_scratch"
+name = "bootloader-core"
 version = "0.1.0"
 edition = "2024"
 
-[[bin]]
-name = "bootloader_from_scratch"
-test = false
-bench = false
+[lib]
+name = "bootloader_core"
+path = "src/lib.rs"

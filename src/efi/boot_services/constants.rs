@@ -1,9 +1,0 @@
-pub const EFI_LOADER_CODE: u32 = 1;
-pub const EFI_LOADER_DATA: u32 = 2;
-pub const EFI_ACPI_RECLAIM_MEMORY: u32 = 9;
-
-pub const EFI_ALLOCATE_ANY_PAGES: u32 = 0;
-pub const EFI_ALLOCATE_MAX_ADDRESS: u32 = 1;
-pub const EFI_ALLOCATE_ADDRESS: u32 = 2;
-
-pub const EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL: u32 = 0x01;
