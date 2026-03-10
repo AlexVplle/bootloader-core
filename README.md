@@ -1,65 +1,37 @@
-# bootloader_from_scratch
+# bootloader-core
 
-A UEFI bootloader for x86-64 written from scratch in Rust, with no external dependencies.
+Firmware-agnostic bootloader core library written in Rust, with no external dependencies.
+
+Handles ELF loading, page table construction, and boot protocol detection/boot. Designed to be used by firmware-specific entry points via the `FirmwareInterface` trait.
 
 ## Supported boot protocols
 
-- **Linux** (bzImage, EFI handover protocol)
 - **Limine** (protocol v1, framebuffer + memory map)
 - **Multiboot2**
 - **Multiboot1**
 
-The protocol is auto-detected from the kernel binary.
-
-## Prerequisites
-
-- Rust nightly toolchain with `x86_64-unknown-uefi` target
-- QEMU with OVMF firmware
-
 ## Usage
 
-**1. Build**
+Add as a dependency in your firmware-specific crate:
 
-```bash
-cargo build
+```toml
+[dependencies]
+bootloader-core = { git = "https://github.com/AlexVplle/bootloader_from_scratch.git" }
 ```
 
-The EFI binary is output to `target/x86_64-unknown-uefi/debug/bootloader_from_scratch.efi`.
+Implement `FirmwareInterface` for your firmware:
 
-**2. Create a FAT32 disk image**
-
-```bash
-dd if=/dev/zero of=disk.img bs=1M count=64
-mkfs.fat -F 32 disk.img
+```rust
+impl FirmwareInterface for MyFirmware {
+    unsafe fn allocate_pages(&mut self, count: usize) -> u64 { ... }
+    unsafe fn try_allocate_pages_at(&mut self, address: u64, count: usize) -> Option<u64> { ... }
+    unsafe fn free_buffer(&mut self, ptr: *mut u8) { ... }
+}
 ```
 
-**3. Populate the disk**
-
-```bash
-mkdir -p mnt/EFI/BOOT
-mount disk.img mnt
-cp target/x86_64-unknown-uefi/debug/bootloader_from_scratch.efi mnt/EFI/BOOT/BOOTX64.EFI
-cp <your_kernel> mnt/kernel
-umount mnt
-```
-
-The bootloader looks for a file named `kernel` at the root of the FAT32 partition.
-
-**4. Run with QEMU**
-
-```bash
-qemu-system-x86_64 \
-  -drive if=pflash,format=raw,readonly=on,file=<OVMF_CODE.fd> \
-  -drive if=pflash,format=raw,file=<OVMF_VARS.fd> \
-  -drive file=disk.img,format=raw \
-  -m 512
-```
-
-Use `-m 1024` or more when booting Linux (needed for kernel decompression).
+Then call `load_elf`, `build_page_tables`, and the appropriate protocol boot function.
 
 ## References
 
-- [UEFI Specification](https://uefi.org/specifications)
 - [Multiboot2 Specification](https://www.gnu.org/software/grub/manual/multiboot2/multiboot.html)
-- [Linux boot protocol](https://www.kernel.org/doc/html/latest/arch/x86/boot.html)
 - [Limine boot protocol](https://github.com/limine-bootloader/limine/blob/trunk/PROTOCOL.md)
