@@ -8,7 +8,7 @@ use crate::elf::elf64::header::Elf64Header;
 use crate::elf::elf64::program_header::Elf64ProgramHeader;
 use crate::firmware::FirmwareInterface;
 use crate::helpers::halt;
-use crate::paging::constants::{PAGE_OFFSET_MASK, PAGE_SIZE};
+use crate::arch::x86_64::paging::constants::{PAGE_OFFSET_MASK, PAGE_SIZE};
 use crate::segment_mapping::{SegmentMapping, virtual_to_physical};
 
 const SHT_RELA: u32 = 4;

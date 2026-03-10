@@ -1,4 +1,4 @@
-use crate::paging::constants::PAGE_SIZE;
+use crate::arch::x86_64::paging::constants::PAGE_SIZE;
 
 #[derive(Copy, Clone)]
 pub struct SegmentMapping {

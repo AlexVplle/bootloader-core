@@ -17,7 +17,7 @@ use memory_map::response::LimineMemoryMapResponse;
 
 use crate::allocator::bump::BumpAllocator;
 use crate::framebuffer::FramebufferInfo;
-use crate::paging::constants::PAGE_SIZE;
+use crate::arch::x86_64::paging::constants::PAGE_SIZE;
 use crate::segment_mapping::SegmentMapping;
 
 fn efi_type_to_limine(efi_type: u32) -> u64 {
@@ -193,6 +193,6 @@ pub unsafe fn boot(
             mmap_size,
             desc_size,
         );
-        crate::jump::jump_64bit(entry);
+        crate::arch::x86_64::jump::jump_64bit(entry);
     }
 }

@@ -1,8 +1,8 @@
 use core::arch::global_asm;
 use core::mem;
 
-use crate::gdt::constants::GDT32;
-use crate::gdt::gdtr::Gdtr;
+use crate::arch::x86_64::gdt::constants::GDT32;
+use crate::arch::x86_64::gdt::gdtr::Gdtr;
 
 pub unsafe fn jump_32bit(entry: u32, eax: u32, ebx: u32) -> ! {
     unsafe {

@@ -27,7 +27,7 @@ impl BootProtocol for Multiboot2 {
 
 pub unsafe fn jump_32(physical_entry: u32, boot_info: *const u8) -> ! {
     unsafe {
-        crate::jump::jump_32bit(physical_entry, BOOT_MAGIC, boot_info as u32)
+        crate::arch::x86_64::jump::jump_32bit(physical_entry, BOOT_MAGIC, boot_info as u32)
     }
 }
 

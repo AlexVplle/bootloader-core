@@ -1,6 +1,6 @@
 use core::ptr;
 
-use crate::paging::constants::{PAGE_SIZE};
+use crate::arch::x86_64::paging::constants::{PAGE_SIZE};
 use super::constants::{
     FRAMEBUFFER_TYPE_RGB, TAG_BOOTLOADER_NAME, TAG_COMMANDLINE, TAG_END, TAG_EFI_MEMORY_MAP,
     TAG_FRAMEBUFFER, TAG_MMAP,
