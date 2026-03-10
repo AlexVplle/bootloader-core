@@ -13,6 +13,13 @@ use crate::segment_mapping::{SegmentMapping, virtual_to_physical};
 
 const SHT_RELA: u32 = 4;
 
+#[cfg(target_arch = "x86_64")]
+const ELF_R_RELATIVE: u32 = 8;
+#[cfg(target_arch = "aarch64")]
+const ELF_R_RELATIVE: u32 = 1027;
+#[cfg(target_arch = "riscv64")]
+const ELF_R_RELATIVE: u32 = 3;
+
 unsafe fn load_segments<F: FirmwareInterface>(
     firmware: &mut F,
     kernel_buffer: *mut u8,
@@ -102,7 +109,6 @@ unsafe fn apply_relocations(
     kernel_buffer: *mut u8,
     mappings: &[SegmentMapping],
     mapping_count: usize,
-    r_relative: u32,
 ) {
     unsafe {
         let elf: &Elf64Header = &*(kernel_buffer as *const Elf64Header);
@@ -128,7 +134,7 @@ unsafe fn apply_relocations(
                 let r_offset: u64 = *reloc_entry;
                 let r_info: u64 = *reloc_entry.add(1);
                 let r_addend: i64 = *(reloc_entry.add(2) as *const i64);
-                if r_info as u32 != r_relative {
+                if r_info as u32 != ELF_R_RELATIVE {
                     continue;
                 }
                 let target_physical: u64 = virtual_to_physical(r_offset, &mappings[..mapping_count]);
@@ -145,7 +151,6 @@ pub unsafe fn load_elf<F: FirmwareInterface>(
     kernel_buffer: *mut u8,
     mappings: &mut [SegmentMapping; 16],
     mapping_count: &mut usize,
-    r_relative: u32,
 ) -> u64 {
     unsafe {
         if *(kernel_buffer as *const u32) != ELF_MAGIC {
@@ -161,7 +166,7 @@ pub unsafe fn load_elf<F: FirmwareInterface>(
         load_segments(firmware, kernel_buffer, ei_class, mappings, mapping_count);
 
         if ei_class == ELFCLASS64 {
-            apply_relocations(kernel_buffer, mappings, *mapping_count, r_relative);
+            apply_relocations(kernel_buffer, mappings, *mapping_count);
         }
 
         firmware.free_buffer(kernel_buffer);
