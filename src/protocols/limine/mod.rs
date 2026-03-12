@@ -193,6 +193,9 @@ pub unsafe fn boot(
             mmap_size,
             desc_size,
         );
+        #[cfg(target_arch = "x86_64")]
         crate::arch::x86_64::jump::jump_64bit(entry);
+        #[cfg(not(target_arch = "x86_64"))]
+        crate::arch::halt();
     }
 }
