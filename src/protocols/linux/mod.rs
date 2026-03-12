@@ -3,7 +3,7 @@ pub mod constants;
 use core::ptr;
 
 use constants::*;
-use crate::arch::Architecture;
+use crate::arch::{PAGE_OFFSET_MASK, PAGE_SIZE};
 use crate::firmware::FirmwareInterface;
 use crate::framebuffer::FramebufferInfo;
 use crate::protocols::boot_protocol::BootProtocol;
@@ -47,7 +47,7 @@ unsafe fn write_u32(base: *mut u8, offset: usize, val: u32) {
     unsafe { ptr::write_unaligned(base.add(offset) as *mut u32, val); }
 }
 
-pub unsafe fn prepare<F: FirmwareInterface, A: Architecture>(
+pub unsafe fn prepare<F: FirmwareInterface>(
     firmware: &mut F,
     kernel_buffer: *mut u8,
     kernel_size: usize,
@@ -67,10 +67,10 @@ pub unsafe fn prepare<F: FirmwareInterface, A: Architecture>(
         let handover_offset: u32 = read_u32(kernel_buffer, HEADER_HANDOVER_OFFSET);
 
         let alloc_pages: usize =
-            ((init_size as usize).max(pm_size) + A::PAGE_OFFSET_MASK as usize) / A::PAGE_SIZE as usize;
+            ((init_size as usize).max(pm_size) + PAGE_OFFSET_MASK as usize) / PAGE_SIZE as usize;
 
         let pm_base: u64 = firmware.allocate_pages(alloc_pages);
-        ptr::write_bytes(pm_base as *mut u8, 0, alloc_pages * A::PAGE_SIZE as usize);
+        ptr::write_bytes(pm_base as *mut u8, 0, alloc_pages * PAGE_SIZE as usize);
         ptr::copy_nonoverlapping(kernel_buffer.add(pm_offset), pm_base as *mut u8, pm_size);
 
         ptr::copy_nonoverlapping(

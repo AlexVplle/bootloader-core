@@ -1,6 +1,6 @@
 use core::ptr;
 
-use crate::arch::Architecture;
+use crate::arch::PAGE_SIZE;
 use super::constants::*;
 use crate::allocator::bump::BumpAllocator;
 
@@ -65,7 +65,7 @@ impl BootInfoBuilder {
         }
     }
 
-    pub unsafe fn add_mmap<A: Architecture>(
+    pub unsafe fn add_mmap(
         &mut self,
         mmap_buffer: *const u8,
         mmap_size: usize,
@@ -82,7 +82,7 @@ impl BootInfoBuilder {
                 let efi_type: u32 = ptr::read_unaligned(desc as *const u32);
                 let base: u64 = ptr::read_unaligned(desc.add(8) as *const u64);
                 let pages: u64 = ptr::read_unaligned(desc.add(24) as *const u64);
-                let length: u64 = pages * A::PAGE_SIZE;
+                let length: u64 = pages * PAGE_SIZE;
 
                 let mb1_type: u32 = match efi_type {
                     1 | 2 | 3 | 4 | 7 => MMAP_AVAILABLE,
