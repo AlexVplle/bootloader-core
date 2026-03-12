@@ -8,7 +8,7 @@ use crate::elf::elf64::constants::PT_LOAD;
 use crate::elf::elf64::header::Elf64Header;
 use crate::elf::elf64::program_header::Elf64ProgramHeader;
 use crate::firmware::FirmwareInterface;
-use crate::helpers::halt;
+use crate::arch::halt;
 use crate::segment_mapping::{SegmentMapping, virtual_to_physical_address};
 
 const SHT_RELA: u32 = 4;
